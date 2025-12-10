@@ -35,20 +35,20 @@ app.use(helmet());
 app.use(compression());
 app.use(mongoSanitize());
 
-const corsOptions = {
-  origin:
-    process.env.NODE_ENV === "production"
-      ? [process.env.CORS_ORIGIN]
-      : [
-          "http://localhost:3000",
-          "http://localhost:5173",
-          "http://127.0.0.1:3000",
-          "http://127.0.0.1:5173",
-          "https://ayurvedakumbh.in",
-        ],
-  credentials: true,
-  optionsSuccessStatus: 200,
-};
+const allowedOrigins = [
+  "https://ayurvedakumbh.in",
+  "http://localhost:3000",
+  "http://localhost:5173",
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  })
+);
+
 app.use(cors(corsOptions));
 
 // Body Parser Middleware
@@ -154,6 +154,7 @@ const io = require("socket.io")(server, {
       "http://localhost:3000",
       "http://localhost:5173",
       "https://ayurvedakumbh.in",
+      "https://localhost:5000",
     ],
     methods: ["GET", "POST"],
   },
