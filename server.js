@@ -14,6 +14,10 @@ const jwt = require("jsonwebtoken");
 const { sendEmail } = require("./controllers/sendEmail.js");
 require("dotenv").config();
 
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
+}
+
 const connectDB = require("./config/database");
 const Subscriber = require("./models/Subscriber");
 const Contact = require("./models/Contact");
