@@ -49,8 +49,6 @@ app.use(
   })
 );
 
-app.use(cors(corsOptions));
-
 // Body Parser Middleware
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
