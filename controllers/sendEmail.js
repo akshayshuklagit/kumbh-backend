@@ -1,10 +1,8 @@
 const fs = require("fs");
 const csv = require("csv-parser");
-const io = require("../server.js");
 require("dotenv").config();
 const nodemailer = require("nodemailer");
 const { createEmailTemplate } = require("../utils/emailTemplate.js");
-const { authenticateToken } = require("../middleware/auth.js");
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.hostinger.com",
@@ -16,34 +14,51 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Delay
+const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+
 const sendEmail = async (req, res) => {
   const io = req.app.get("io");
+
   if (!req.file) {
     return res.status(400).json({ error: "CSV file is required" });
   }
 
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  const results = [];
+  const emails = [];
 
   fs.createReadStream(req.file.path)
     .pipe(csv())
-    .on("data", (row) => results.push(row))
-    .on("end", async () => {
+    .on("data", (row) => emails.push(row))
+    .on("end", () => {
       fs.unlinkSync(req.file.path);
 
-      let success = [];
-      let failed = [];
-      let sent = 0;
+      res.json({
+        message: "Bulk email started",
+        total: emails.length,
+      });
 
-      const subject = req.body.subject || "Ayurveda Kumbh2025";
-      const bodyContent = req.body.html || req.body.text || "";
+      processEmails(emails, io, req.body);
+    });
+};
 
-      io.emit("bulkStart", { total: results.length });
+async function processEmails(emails, io, body) {
+  const subject = body.subject || "Ayurveda Kumbh 2025";
+  const content = body.html || body.text || "";
 
-      for (const row of results) {
-        const personalizedHtml = createEmailTemplate(
+  const batchSize = 10;
+  let sent = 0;
+  let failed = [];
+
+  io.emit("bulkStart", { total: emails.length });
+
+  for (let i = 0; i < emails.length; i += batchSize) {
+    const batch = emails.slice(i, i + batchSize);
+
+    await Promise.all(
+      batch.map(async (row) => {
+        const html = createEmailTemplate(
           row.name || "",
-          bodyContent.replace("{{name}}", row.name || "")
+          content.replace("{{name}}", row.name || "")
         );
 
         try {
@@ -51,49 +66,28 @@ const sendEmail = async (req, res) => {
             from: process.env.EMAIL_USER,
             to: row.email,
             subject,
-            html: personalizedHtml,
+            html,
           });
-          success.push(row.email);
+
           sent++;
           io.emit("emailSent", { email: row.email, sent });
-
-          await delay(1500);
         } catch (err) {
+          failed.push(row.email);
           io.emit("emailFailed", { email: row.email, reason: err.message });
-          failed.push({ email: row.email, error: err.message });
-
-          // --- Retry once after waiting ---
-          await delay(2500);
-
-          try {
-            await transporter.sendMail({
-              from: process.env.EMAIL_USER,
-              to: row.email,
-              subject,
-              html: personalizedHtml,
-            });
-
-            success.push(row.email);
-            failed = failed.filter((f) => f.email !== row.email);
-          } catch (retryErr) {}
         }
-      }
+      })
+    );
 
-      io.emit("bulkDone", {
-        total: results.length,
-        sent,
-        failed,
-      });
+    await wait(1000);
+  }
 
-      return res.json({
-        message: "Bulk email process completed",
-        total: results.length,
-        success: success,
-        sent: success.length,
-        failed: failed.length,
-        failedList: failed,
-      });
-    });
-};
+  io.emit("bulkDone", {
+    total: emails.length,
+    sent,
+    failed,
+  });
+
+  console.log("Bulk email done", sent, failed.length);
+}
 
 module.exports = { sendEmail };
