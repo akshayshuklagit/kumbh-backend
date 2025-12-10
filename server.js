@@ -138,7 +138,12 @@ app.get("/api/admin/stats", authenticateToken, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
+app.get("/api/track", async (req, res) => {
+  const { email, name } = req.query;
+  const subscriber = new Subscriber({ email, name });
+  await subscriber.save();
+  res.json({ success: true, subscriber });
+});
 app.post(
   "/api/send-bulk-email",
   authenticateToken,
