@@ -13,6 +13,10 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+console.log(process.env.SMTP_HOST);
+console.log(process.env.SMTP_PORT);
+console.log("email transporter using ", process.env.EMAIL_USER);
+console.log("password using", process.env.EMAIL_PASS);
 
 // Keep Render alive
 setInterval(() => {}, 10000);
@@ -73,7 +77,7 @@ async function processEmails(emails, io, body) {
 
         try {
           await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+            from: "admin@ayurvedakumbh.in",
             to: row.email,
             subject,
             html,

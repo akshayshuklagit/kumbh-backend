@@ -144,6 +144,7 @@ app.get("/api/track", async (req, res) => {
   await subscriber.save();
   res.json({ success: true, subscriber });
 });
+
 app.post(
   "/api/send-bulk-email",
   authenticateToken,
