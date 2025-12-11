@@ -13,10 +13,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-console.log(process.env.SMTP_HOST);
-console.log(process.env.SMTP_PORT);
-console.log("email transporter using ", process.env.EMAIL_USER);
-console.log("password using", process.env.EMAIL_PASS);
 
 // Keep Render alive
 setInterval(() => {}, 10000);
@@ -83,11 +79,9 @@ async function processEmails(emails, io, body) {
             html,
           });
 
-          console.log("Sending to:", row.email);
           sent++;
           io.emit("emailSent", { email: row.email, sent });
         } catch (err) {
-          console.log("Failed:", row.email, err.message);
           failed.push(row.email);
           io.emit("emailFailed", { email: row.email, reason: err.message });
         }
